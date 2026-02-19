@@ -1,24 +1,60 @@
-﻿venv/
+﻿## ──────────────────────────────────────────────────────
+## Horizon - AI Project Intelligence  |  .gitignore
+## ──────────────────────────────────────────────────────
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+
+# ── Python ──
+venv/
 .venv/
 env/
 __pycache__/
 *.py[cod]
-.env
-.env.*
+*.pyo
+*.egg-info/
+
+# ── Node / React ──
+node_modules/
+build/
+dist/
+.cache/
+
+# ── Model caches & large binaries ──
 *.pkl
 *.joblib
 *.h5
+*.pt
+*.bin
+*.onnx
+*.safetensors
 *.csv
 *.parquet
-*.png
-*.jpg
-*.svg
+.transformers_cache/
+.huggingface/
+torch_cache/
+
+# ── IDE & OS ──
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-dist/
-build/
-*.egg-info/
+*.swp
+*.swo
+
+# ── Logs & databases ──
 *.log
 logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Misc ──
+*.png
+*.jpg
+*.svg
+download.jpeg
+# Allow landing page background image
+!frontend/src/pages/download.jpeg
