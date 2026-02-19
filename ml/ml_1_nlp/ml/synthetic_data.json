@@ -1,0 +1,12 @@
+[
+  {"text": "I will finish the login page by tomorrow.", "label": "task mention"},
+  {"text": "Please update the documentation for the API.", "label": "task mention"},
+  {"text": "The database migration is stuck because the server is down.", "label": "blocker"},
+  {"text": "We cannot proceed with the UI until the backend is ready.", "label": "blocker"},
+  {"text": "There is a risk that the library we are using might be deprecated soon.", "label": "risk"},
+  {"text": "If we don't get the assets by Friday, the launch might be delayed.", "label": "risk"},
+  {"text": "This task depends on the completion of the auth module.", "label": "dependency"},
+  {"text": "Wait for Sarah to approve the PR before merging.", "label": "dependency"},
+  {"text": "Hey everyone, how's it going?", "label": "general message"},
+  {"text": "Lunch is at 1 PM today.", "label": "general message"}
+]
