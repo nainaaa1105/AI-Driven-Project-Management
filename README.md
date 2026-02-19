@@ -1,4 +1,4 @@
-# Horizon -- AI Project Intelligence
+# Horizon - AI Project Intelligence
 
 An enterprise-grade, AI-powered project management system that transforms natural-language team conversations into structured tasks, risk predictions, and executive insights -- automatically.
 
@@ -17,11 +17,11 @@ ml/             Three finalized ML modules (read-only)
 
 ## Key Capabilities
 
-- **Chat-to-Task Pipeline** -- send a message, get a structured task with domain, urgency, contacts, and risk score.
-- **Duplicate & Dependency Detection** -- ML-2 finds similar/related tasks via sentence embeddings.
-- **Risk Prediction & Alerts** -- ML-3 predicts failure probability with SHAP-based explanations.
-- **Executive AI Summaries** -- every message produces structured analysis visible in a sidebar panel.
-- **Dashboard & Kanban Board** -- real-time stats, risk distribution charts, and task management.
+- **Chat-to-Task Pipeline** - send a message, get a structured task with domain, urgency, contacts, and risk score.
+- **Duplicate & Dependency Detection** - ML-2 finds similar/related tasks via sentence embeddings.
+- **Risk Prediction & Alerts** - ML-3 predicts failure probability with SHAP-based explanations.
+- **Executive AI Summaries** - every message produces structured analysis visible in a sidebar panel.
+- **Dashboard & Kanban Board** - real-time stats, risk distribution charts, and task management.
 
 ## ML Models (Finalized)
 
