@@ -20,20 +20,31 @@ class EntityExtractor:
             r"\b(by|on)\s+(\d{1,2}/\d{1,2}(/\d{2,4})?)\b",
             r"\b(asap|eod|end of day|end of the week)\b",
         ]
+        # Regex for @mentions and channel refs
+        self.mention_pattern = r"@([A-Za-z0-9_\-\.]+)"
+        self.channel_pattern = r"#([A-Za-z0-9_\-\.]+)|channel\s+([A-Za-z0-9_\-\.]+)"
+        # Ownership/assignment phrases
+        self.ownership_phrases = [
+            r"\byou take this\b",
+            r"\bassign this to @?[A-Za-z0-9_\-\.]+\b",
+            r"\bcan you handle this\b",
+            r"\bthis is on you\b",
+            r"\bI will take this\b",
+            r"\bI'll take this\b",
+            r"\bplease take this\b",
+            r"\bassign to\b",
+            r"\bowned by @?[A-Za-z0-9_\-\.]+\b",
+        ]
+        # Deadline patterns with optional user mentions
+        self.deadline_patterns = [
+            r"@?([A-Za-z0-9_\-\.]+) by (\w+(?: \d+|))",
+            r"by (tomorrow|today|friday|monday|tuesday|wednesday|thursday|saturday|sunday)",
+            r"in (\d+) (days?|weeks?|hours?)",
+            r"within (\d+) (days?|hours?)",
+        ]
 
     def extract_entities(self, text):
-        entities = {
-            "task_name": None,
-            "dependency_reference": [],
-            "time_mentions": [],
-            "reason_or_context": None,
-            "sentiment": "neutral",
-            "actors": [],
-            "tools_and_tech": [],
-            "urgency": "normal",
-            "contact_info": {"emails": [], "urls": []},
-            "action_items": []
-        }
+        entities = self._get_initial_entities()
 
     def extract_entities(self, text):
         entities = self._get_initial_entities()
@@ -68,6 +79,20 @@ class EntityExtractor:
             entities["contact_info"]["emails"] = re.findall(email_pattern, text)
             entities["contact_info"]["urls"] = re.findall(url_pattern, text)
 
+            # 4b. User Mentions (@user)
+            mentions = re.findall(self.mention_pattern, text)
+            for m in mentions:
+                if m not in entities["user_mentions"]:
+                    entities["user_mentions"].append(m)
+
+            # 4c. Channel references (#channel or 'channel name')
+            chan_matches = re.findall(self.channel_pattern, text, flags=re.IGNORECASE)
+            for match in chan_matches:
+                # match is tuple because of two capture groups
+                chan = match[0] or match[1]
+                if chan and chan not in entities["channel_refs"]:
+                    entities["channel_refs"].append(chan)
+
             # 5. Extraction of Time Mentions
             for ent in doc.ents:
                 if ent.label_ in ["DATE", "TIME"]:
@@ -89,6 +114,28 @@ class EntityExtractor:
                     action_phrase = " ".join([t.text for t in token.subtree])
                     if action_phrase not in entities["action_items"]:
                         entities["action_items"].append(action_phrase)
+
+                    # 6b. Ownership signals via phrase heuristics
+                    text_lower = text.lower()
+                    for pattern in self.ownership_phrases:
+                        if re.search(pattern, text_lower):
+                            if pattern not in entities["ownership_signals"]:
+                                entities["ownership_signals"].append(pattern)
+
+                    # 6c. User-linked deadlines (e.g., '@sara in 2 days', 'you finish this by tomorrow')
+                    for pat in self.deadline_patterns:
+                        for m in re.finditer(pat, text_lower):
+                            groups = m.groups()
+                            if groups:
+                                # crude normalization
+                                user = None
+                                deadline_text = m.group(0)
+                                # if first group looks like a user
+                                if len(groups) >= 1 and groups[0] and not groups[0].isdigit() and not groups[0].startswith("in "):
+                                    user = groups[0]
+                                entry = {"user": user, "deadline_text": deadline_text}
+                                if entry not in entities["user_deadlines"]:
+                                    entities["user_deadlines"].append(entry)
 
             # 7. Reason or Why
             reason_found = False
@@ -136,7 +183,11 @@ class EntityExtractor:
             "tools_and_tech": [],
             "urgency": "normal",
             "contact_info": {"emails": [], "urls": []},
-            "action_items": []
+            "action_items": [],
+            "user_mentions": [],
+            "channel_refs": [],
+            "ownership_signals": [],
+            "user_deadlines": []
         }
 
 if __name__ == "__main__":
