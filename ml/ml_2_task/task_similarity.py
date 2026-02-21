@@ -1,16 +1,8 @@
-"""
-Task Similarity Engine — ML Engineer 2
-AI-Driven Project Intelligence for Engineering Teams (Hackathon)
-
-Hybrid approach:
-  - TF-IDF + Cosine Similarity  →  keyword overlap
-  - Sentence Transformers        →  semantic meaning
-  - Final score = 0.5 * tfidf + 0.5 * semantic
-"""
+"""Task Similarity Engine — TF-IDF + Semantic, scoped by workspace/project."""
 
 import numpy as np
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -28,37 +20,29 @@ from thresholds import (
 
 @dataclass
 class Task:
-    """Represents a single engineering task."""
+    """Engineering task with workspace/project scope."""
     id: int
     title: str
     description: str
-    past_outcome: str  # "success" | "delayed"
+    past_outcome: str
+    workspace_id: str
+    project_id: Optional[str] = None
+    assigned_user_id: Optional[str] = None
 
     def get_full_text(self) -> str:
-        """Combine title + description for similarity analysis."""
         return f"{self.title} {self.description}"
 
 
 class TaskSimilarityEngine:
-    """
-    Hybrid Task Similarity Engine.
-
-    Usage:
-        engine = TaskSimilarityEngine()
-        engine.add_tasks(existing_tasks)
-        results = engine.find_similar_tasks("Authentication is broken")
-    """
+    """Hybrid TF-IDF + Semantic similarity engine, scoped per workspace."""
 
     def __init__(self):
-        # TF-IDF for fast keyword overlap detection
         self.tfidf_vectorizer = TfidfVectorizer(
             max_features=TFIDF_MAX_FEATURES,
             stop_words=TFIDF_STOP_WORDS,
             lowercase=True,
             ngram_range=TFIDF_NGRAM_RANGE,
         )
-
-        # Sentence Transformer for deep semantic similarity
         print("Loading Sentence Transformer model...")
         self.semantic_model = SentenceTransformer(SENTENCE_TRANSFORMER_MODEL)
 
@@ -66,15 +50,8 @@ class TaskSimilarityEngine:
         self.tfidf_matrix = None
         self.semantic_embeddings = None
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Index building
-    # ──────────────────────────────────────────────────────────────────────────
-
     def add_tasks(self, tasks: List[Task]) -> None:
-        """
-        Load existing tasks and precompute all indices.
-        Call once at startup; call again whenever tasks change.
-        """
+        """Load tasks and precompute TF-IDF + semantic indices."""
         self.existing_tasks = tasks
         if not tasks:
             self.tfidf_matrix = None
@@ -89,7 +66,7 @@ class TaskSimilarityEngine:
         print(f"Engine ready — {len(tasks)} tasks indexed.")
 
     def build_tfidf_index(self, task_texts: List[str]) -> None:
-        """Fit TF-IDF vectorizer and store the document matrix."""
+        """Fit TF-IDF vectorizer."""
         if not task_texts:
             self.tfidf_matrix = None
             return
@@ -97,64 +74,66 @@ class TaskSimilarityEngine:
         print(f"TF-IDF index built: {len(task_texts)} tasks, "
               f"{self.tfidf_matrix.shape[1]} features")
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Similarity computation
-    # ──────────────────────────────────────────────────────────────────────────
-
     def compute_tfidf_similarity(self, new_task_text: str) -> np.ndarray:
-        """
-        Keyword overlap via TF-IDF cosine similarity.
-        Good for: same technical terms, acronyms, error codes.
-        """
+        """TF-IDF cosine similarity for keyword overlap."""
         if self.tfidf_matrix is None:
             return np.array([])
         vec = self.tfidf_vectorizer.transform([new_task_text])
         return cosine_similarity(vec, self.tfidf_matrix).flatten()
 
     def compute_semantic_similarity(self, new_task_text: str) -> np.ndarray:
-        """
-        Meaning overlap via Sentence Transformer cosine similarity.
-        Good for: paraphrases, synonyms, conceptually identical tasks.
-        """
+        """Semantic cosine similarity via Sentence Transformer."""
         if self.semantic_embeddings is None or len(self.semantic_embeddings) == 0:
             return np.array([])
         embedding = self.semantic_model.encode([new_task_text])
         return cosine_similarity(embedding, self.semantic_embeddings).flatten()
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Main API
-    # ──────────────────────────────────────────────────────────────────────────
-
     def find_similar_tasks(
-        self, new_task_text: str, threshold: float = 0.50
-    ) -> List[Dict[str, Any]]:
+        self, 
+        new_task_text: str, 
+        workspace_id: str,
+        project_id: Optional[str] = None,
+        user_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
-        Find tasks similar to new_task_text.
-
-        Args:
-            new_task_text: Plain-text task extracted from a chat message.
-            threshold:     Minimum final score to include in results.
-
-        Returns:
-            List of dicts sorted by final_similarity_score descending:
-            {
-              "task_id": int,
-              "task_text": str,
-              "tfidf_similarity": float,
-              "semantic_similarity": float,
-              "final_similarity_score": float,
-              "label": "DUPLICATE" | "RELATED" | "NEW",
-              "past_outcome": str
+        Find similar tasks scoped to workspace/project.
+        Returns: { decision, confidence, matched_task_id, assigned_user_id, similar_tasks }
+        """
+        # Scope comparison to the given workspace (and project if provided)
+        scoped_tasks = [
+            task for task in self.existing_tasks 
+            if task.workspace_id == workspace_id and (
+                project_id is None or task.project_id == project_id
+            )
+        ]
+        
+        if not scoped_tasks:
+            assigned_user = self._determine_task_ownership(user_context) if user_context else None
+            return {
+                "decision": "create_new",
+                "confidence": 0.0,
+                "matched_task_id": None,
+                "assigned_user_id": assigned_user,
+                "similar_tasks": []
             }
-        """
-        if not self.existing_tasks:
-            return []
 
-        tfidf_scores = self.compute_tfidf_similarity(new_task_text)
-        semantic_scores = self.compute_semantic_similarity(new_task_text)
+        scoped_task_texts = [task.get_full_text() for task in scoped_tasks]
 
-        # Fall back to zeros if a component is unavailable
-        n = len(self.existing_tasks)
+        if scoped_task_texts:
+            scoped_tfidf_matrix = self.tfidf_vectorizer.fit_transform(scoped_task_texts)
+            vec = self.tfidf_vectorizer.transform([new_task_text])
+            tfidf_scores = cosine_similarity(vec, scoped_tfidf_matrix).flatten()
+        else:
+            tfidf_scores = np.array([])
+
+        if scoped_task_texts:
+            scoped_embeddings = self.semantic_model.encode(scoped_task_texts)
+            new_embedding = self.semantic_model.encode([new_task_text])
+            semantic_scores = cosine_similarity(new_embedding, scoped_embeddings).flatten()
+        else:
+            semantic_scores = np.array([])
+
+        n = len(scoped_tasks)
         if len(tfidf_scores) == 0:
             tfidf_scores = np.zeros(n)
         if len(semantic_scores) == 0:
@@ -162,19 +141,78 @@ class TaskSimilarityEngine:
 
         final_scores = TFIDF_WEIGHT * tfidf_scores + SEMANTIC_WEIGHT * semantic_scores
 
-        results = []
-        for i, task in enumerate(self.existing_tasks):
+        min_threshold = 0.3
+        similar_tasks = []
+        for i, task in enumerate(scoped_tasks):
             score = float(final_scores[i])
-            if score >= threshold:
-                results.append({
+            if score >= min_threshold:
+                similar_tasks.append({
                     "task_id": task.id,
                     "task_text": task.get_full_text(),
-                    "tfidf_similarity": float(tfidf_scores[i]),
-                    "semantic_similarity": float(semantic_scores[i]),
+                    "tfidf_similarity": float(tfidf_scores[i]) if len(tfidf_scores) > i else 0.0,
+                    "semantic_similarity": float(semantic_scores[i]) if len(semantic_scores) > i else 0.0,
                     "final_similarity_score": score,
-                    "label": classify(score),
                     "past_outcome": task.past_outcome,
+                    "assigned_user_id": task.assigned_user_id
                 })
 
-        results.sort(key=lambda x: x["final_similarity_score"], reverse=True)
-        return results
+        similar_tasks.sort(key=lambda x: x["final_similarity_score"], reverse=True)
+
+        best_match = similar_tasks[0] if similar_tasks else None
+        assigned_user = self._determine_task_ownership(user_context) if user_context else None
+        
+        if not best_match:
+            return {
+                "decision": "create_new",
+                "confidence": 0.0,
+                "matched_task_id": None,
+                "assigned_user_id": assigned_user,
+                "similar_tasks": []
+            }
+        
+        confidence = best_match["final_similarity_score"]
+
+        # >= 0.85 → auto_link | 0.65–0.85 → suggest | < 0.65 → create_new
+        if confidence >= 0.85:
+            return {
+                "decision": "auto_link",
+                "confidence": confidence,
+                "matched_task_id": best_match["task_id"],
+                "assigned_user_id": assigned_user,
+                "similar_tasks": similar_tasks
+            }
+        
+        elif confidence >= 0.65:
+            return {
+                "decision": "suggest",
+                "confidence": confidence,
+                "matched_task_id": best_match["task_id"],
+                "assigned_user_id": assigned_user,
+                "similar_tasks": similar_tasks
+            }
+        
+        else:
+            return {
+                "decision": "create_new",
+                "confidence": confidence,
+                "matched_task_id": None,
+                "assigned_user_id": assigned_user,
+                "similar_tasks": similar_tasks
+            }
+
+    def _determine_task_ownership(self, user_context: Dict[str, Any]) -> Optional[str]:
+        """
+        Rule-based ownership: 1 mention → that user | 0 mentions → sender | multiple → None.
+        """
+        if not user_context:
+            return None
+            
+        mentioned_users = user_context.get("mentioned_users", [])
+        sender_id = user_context.get("sender_id")
+
+        if len(mentioned_users) == 1:
+            return mentioned_users[0]
+        elif len(mentioned_users) == 0 and sender_id:
+            return sender_id
+        else:
+            return None
