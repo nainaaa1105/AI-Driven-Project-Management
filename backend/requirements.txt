@@ -1,15 +1,15 @@
-# ──────────────────────────────────────────────────────────────────────
-# AI-Driven Project Intelligence — Backend Dependencies
-# ──────────────────────────────────────────────────────────────────────
+﻿# ----------------------------------------------------------------------
+# AI-Driven Project Intelligence - Backend Dependencies
+# ----------------------------------------------------------------------
 
 # Web framework
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
 websockets>=12.0
 python-multipart>=0.0.6
 
 # Database
-sqlalchemy>=2.0.23
+sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.9
 
 # Configuration
@@ -30,6 +30,11 @@ pandas>=2.0.0
 numpy>=1.24.0
 joblib>=1.3.0
 shap>=0.43.0
+
+# Graph / Network Analysis
+networkx>=3.1
+
+# Visualisation
 matplotlib>=3.7.0
 seaborn>=0.12.0
 
