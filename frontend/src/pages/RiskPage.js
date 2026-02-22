@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { predictRisk } from "../services/api";
+import React, { useState, useEffect } from "react";
+import { predictRisk, fetchWorkspaceRisk } from "../services/api";
 
-export default function RiskPage() {
+export default function RiskPage({ workspace, wsEpoch }) {
   const [form, setForm] = useState({
     task_complexity: 0.5,
     dependency_count: 0.3,
@@ -11,6 +11,16 @@ export default function RiskPage() {
   });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [wsRisk, setWsRisk] = useState(null);
+
+  /* Load workspace-level risk overview when a workspace is selected */
+  useEffect(() => {
+    if (workspace?.id) {
+      fetchWorkspaceRisk(workspace.id).then(setWsRisk).catch(() => setWsRisk(null));
+    } else {
+      setWsRisk(null);
+    }
+  }, [workspace?.id, wsEpoch]);
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: Number(value) }));
@@ -40,6 +50,26 @@ export default function RiskPage() {
       <p style={{ color: "var(--text-dim)", fontSize: "0.82rem", marginBottom: 16, lineHeight: 1.6 }}>
         Risk reflects likelihood of failure, not urgency. It increases when blockers, delays, or unresolved issues persist.
       </p>
+
+      {/* ── Workspace Risk Overview ── */}
+      {wsRisk && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h3 style={{ fontSize: "0.9rem", color: "var(--accent-light)", fontWeight: 600, marginBottom: 10 }}>
+            Workspace Risk — {workspace?.name}
+          </h3>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: "0.85rem" }}>
+            {wsRisk.avg_risk_score != null && (
+              <div><strong>Avg Risk:</strong> {(wsRisk.avg_risk_score * 100).toFixed(0)}%</div>
+            )}
+            {wsRisk.high_risk_count != null && (
+              <div><strong>High-Risk Tasks:</strong> {wsRisk.high_risk_count}</div>
+            )}
+            {wsRisk.total_tasks != null && (
+              <div><strong>Total Tasks:</strong> {wsRisk.total_tasks}</div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
         {/* ── Form ── */}

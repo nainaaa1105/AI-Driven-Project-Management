@@ -8,6 +8,8 @@ from pydantic import BaseModel
 class MessageCreate(BaseModel):
     """Incoming chat message from the frontend."""
     content: str
+    workspace_id: Optional[int] = None
+    channel_id: Optional[int] = None
 
 
 class MessageResponse(BaseModel):
@@ -15,6 +17,9 @@ class MessageResponse(BaseModel):
     id: int
     content: str
     sender: str
+    sender_id: Optional[int] = None
+    workspace_id: Optional[int] = None
+    channel_id: Optional[int] = None
     ai_response: Optional[str] = None
     created_at: datetime
 

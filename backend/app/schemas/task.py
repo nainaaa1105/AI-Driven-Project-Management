@@ -19,6 +19,9 @@ class TaskOut(BaseModel):
     similarity_label: Optional[str] = "NEW"
     linked_task_id: Optional[int] = None
     update_notes: Optional[str] = ""
+    workspace_id: Optional[int] = None
+    channel_id: Optional[int] = None
+    assigned_user_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -31,3 +34,4 @@ class TaskUpdatePayload(BaseModel):
     domains: Optional[List[str]] = None
     urgency: Optional[str] = None
     status: Optional[str] = None
+    assigned_user_id: Optional[int] = None

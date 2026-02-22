@@ -77,6 +77,9 @@ export default function LandingPage({ onEnter, onDashboard }) {
 
   return (
     <div className="landing">
+      {/* Noise / grain overlay */}
+      <div className="noise-overlay" aria-hidden="true" />
+
       {/* Geometric background shapes */}
       <div className="geo-shapes" aria-hidden="true">
         <div className="geo geo-1" />
@@ -87,6 +90,9 @@ export default function LandingPage({ onEnter, onDashboard }) {
       {/* 1. HERO */}
       <section className="hero">
         <div className="hero-glow" />
+        <div className="hero-glow-left" />
+        <div className="hero-glow-right" />
+        <div className="hero-horizon-line" />
         <div className="hero-content fade-up">
           <h1 className="hero-title">
             <span className="gradient-text">Horizon</span>

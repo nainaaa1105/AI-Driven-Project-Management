@@ -8,7 +8,29 @@ const DEFAULT_DOMAIN_OPTIONS = [
   "database", "testing", "mobile", "infrastructure", "General",
 ];
 
-export default function TasksPage() {
+/* Helper: extract initials from a name */
+function getInitials(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+
+function nameHue(str) {
+  let h = 0;
+  for (let i = 0; i < (str || "").length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+  return Math.abs(h) % 360;
+}
+
+/* Map user IDs to display names (from task data or current user) */
+function assigneeName(task, currentUser) {
+  if (!task.assigned_user_id) return null;
+  if (currentUser && task.assigned_user_id === currentUser.id) return currentUser.name || "You";
+  return `User #${task.assigned_user_id}`;
+}
+
+export default function TasksPage({ user, workspace, wsEpoch }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState(null);
@@ -29,12 +51,12 @@ export default function TasksPage() {
 
   const load = async () => {
     setLoading(true);
-    try { setTasks(await fetchTasks()); }
+    try { setTasks(await fetchTasks(undefined, workspace?.id)); }
     catch (err) { console.error("Failed to load tasks", err); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [workspace?.id, wsEpoch]);
   useEffect(() => { fetchCustomDomains().then(setCustomDomains).catch(() => {}); }, []);
 
   const handleStatusChange = async (taskId, newStatus) => {
@@ -133,7 +155,20 @@ export default function TasksPage() {
             )}
             {grouped[status].map((task) => (
               <div className="task-card" key={task.id}>
-                <div className="task-id-label">Task #{task.id}</div>
+                <div className="task-card-top">
+                  <div className="task-id-label">Task #{task.id}</div>
+                  {(() => {
+                    const aName = assigneeName(task, user);
+                    return aName ? (
+                      <span className="task-assignee" title={`Assigned to ${aName}`}>
+                        <span className="task-assignee-avatar" style={{ background: `hsl(${nameHue(aName)}, 55%, 45%)` }}>
+                          {getInitials(aName)}
+                        </span>
+                        <span className="task-assignee-name">{aName}</span>
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
                 <div className="title">{task.title}</div>
                 <div className="meta">
                   <span className={`risk-badge ${task.risk_level || "Low"}`} title="Risk reflects likelihood of failure, not urgency">

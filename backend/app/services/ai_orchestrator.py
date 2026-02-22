@@ -72,9 +72,9 @@ def _load_ml_processor():
         if key == "ml" or key.startswith("ml."):
             saved[key] = sys.modules.pop(key)
 
-    # Create a temporary "ml" package whose __path__ is ml/ml_1_nlp/
+    # Create a temporary "ml" package whose __path__ is ml/ml_1_nlp/ml/
     fake_ml = types.ModuleType("ml")
-    fake_ml.__path__ = [_ml1_dir]
+    fake_ml.__path__ = [os.path.join(_ml1_dir, "ml")]
     fake_ml.__package__ = "ml"
     sys.modules["ml"] = fake_ml
 
@@ -111,14 +111,16 @@ from task_similarity import TaskSimilarityEngine, Task as MLTask  # noqa: E402
 # ML-3 — Risk prediction
 # ═══════════════════════════════════════════════════════════════════════════════
 
-_ml3_dir = os.path.join(PROJECT_ROOT, "ml", "ml_3_risk")
+_ml3_dir = os.path.join(PROJECT_ROOT, "ml", "ml_3_risk_scoring")
 if _ml3_dir not in sys.path:
     sys.path.insert(0, _ml3_dir)
 
 from risk_model import (  # noqa: E402
     predict_risk as _predict_risk,
     build_golden_data,
-    train_model,
+    load_data as _load_risk_data,
+    train as _train_risk,
+    evaluate as _evaluate_risk,
     FEATURE_COLS,
     SCALE_COLS,
 )
@@ -129,6 +131,8 @@ from risk_model import (  # noqa: E402
 from app.models.task import Task as DBTask
 from app.models.alert import Alert as DBAlert
 from app.models.message import Message as DBMessage
+from app.models.message_task_map import MessageTaskMap
+from app.models.ai_event import AIEvent
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -175,8 +179,9 @@ class AIOrchestrator:
         Load pre-trained risk model artefacts (risk_model.pkl, feature_scaler.pkl).
         If they don't exist, train on golden scenarios and export.
         """
-        model_path = os.path.join(_ml3_dir, "risk_model.pkl")
-        scaler_path = os.path.join(_ml3_dir, "feature_scaler.pkl")
+        model_dir = os.path.join(_ml3_dir, "model_artifacts")
+        model_path = os.path.join(model_dir, "team_risk_model.pkl")
+        scaler_path = os.path.join(model_dir, "team_feature_scaler.pkl")
 
         if os.path.exists(model_path) and os.path.exists(scaler_path):
             logger.info("  Found pre-trained artefacts — loading …")
@@ -184,17 +189,16 @@ class AIOrchestrator:
             self.risk_scaler = joblib.load(scaler_path)
         else:
             logger.info("  No pre-trained model found — training on golden data …")
+            df = _load_risk_data()
             golden_df = build_golden_data()
-            weights = np.ones(len(golden_df))
             (
                 self.risk_model,
                 self.risk_scaler,
                 _X_train, _y_train,
                 _X_test, _y_test,
-                _shap_vals, _shap_sample,
-                _explainer, _mean_shap,
-            ) = train_model(golden_df, weights)
+            ) = _train_risk(df, golden_df)
             # Persist for future runs
+            os.makedirs(model_dir, exist_ok=True)
             joblib.dump(self.risk_model, model_path)
             joblib.dump(self.risk_scaler, scaler_path)
             logger.info("  Model trained and saved.")
@@ -218,6 +222,7 @@ class AIOrchestrator:
                 title=t.title,
                 description=t.description or "",
                 past_outcome="success" if t.risk_score and t.risk_score < 0.5 else "delayed",
+                workspace_id=str(t.workspace_id or ""),
             )
             for t in db_tasks
         ]
@@ -226,14 +231,26 @@ class AIOrchestrator:
     # ==================================================================
     # MAIN PIPELINE — ML-1 → ML-2 → ML-3
     # ==================================================================
-    def process_message(self, text: str, db: Session) -> dict:
+    def process_message(
+        self,
+        text: str,
+        db: Session,
+        workspace_id: int = None,
+        channel_id: int = None,
+        sender_id: int = None,
+        message_id: int = None,
+    ) -> dict:
         """
         End-to-end AI pipeline.
 
         Parameters
         ----------
-        text : str   – raw chat message from the user
-        db   : Session – active SQLAlchemy session
+        text         : str     – raw chat message from the user
+        db           : Session – active SQLAlchemy session
+        workspace_id : int     – workspace context (optional, for scoping)
+        channel_id   : int     – channel context (optional)
+        sender_id    : int     – user who sent the message (optional)
+        message_id   : int     – DB id of the persisted message (optional)
 
         Returns
         -------
@@ -267,9 +284,22 @@ class AIOrchestrator:
         logger.info("[ML-2] Checking task similarity …")
         self._sync_task_index(db)
 
-        similar_results = self.similarity_engine.find_similar_tasks(task_name)
-        top_match = similar_results[0] if similar_results else None
-        similarity_label = top_match["label"] if top_match else "NEW"
+        similar_results = self.similarity_engine.find_similar_tasks(
+            task_name, workspace_id=str(workspace_id or ""),
+        )
+        decision = similar_results.get("decision", "create_new")
+        top_match = (
+            similar_results["similar_tasks"][0]
+            if similar_results.get("similar_tasks")
+            else None
+        )
+        # Map ML-2 decision vocabulary to the labels used below
+        _decision_to_label = {
+            "auto_link": "DUPLICATE",
+            "suggest": "RELATED",
+            "create_new": "NEW",
+        }
+        similarity_label = _decision_to_label.get(decision, "NEW")
 
         # ──────────────────────────────────────────────────────────────
         # STEP 3 — Create / update / link task in DB
@@ -298,6 +328,9 @@ class AIOrchestrator:
                 urgency=urgency,
                 similarity_label="RELATED",
                 linked_task_id=linked_task_id,
+                workspace_id=workspace_id,
+                channel_id=channel_id,
+                assigned_user_id=sender_id,
             )
             db.add(db_task)
             db.commit()
@@ -314,6 +347,9 @@ class AIOrchestrator:
                 domain=domain,
                 urgency=urgency,
                 similarity_label="NEW",
+                workspace_id=workspace_id,
+                channel_id=channel_id,
+                assigned_user_id=sender_id,
             )
             db.add(db_task)
             db.commit()
@@ -370,10 +406,49 @@ class AIOrchestrator:
                 message=alert_msg,
                 level=risk_level,
                 task_id=db_task.id if db_task else None,
+                workspace_id=workspace_id,
             )
             db.add(alert)
             db.commit()
             logger.info(f"  ALERT created — {alert_msg}")
+
+        # ──────────────────────────────────────────────────────────────
+        # STEP 5b — Message → Task linkage
+        # ──────────────────────────────────────────────────────────────
+        if message_id and db_task:
+            link = MessageTaskMap(
+                message_id=message_id,
+                task_id=db_task.id,
+                relationship_type="spawned" if task_created else "linked",
+            )
+            db.add(link)
+            db.commit()
+
+        # ──────────────────────────────────────────────────────────────
+        # STEP 5c — Log AI event
+        # ──────────────────────────────────────────────────────────────
+        event_type = "task_created" if task_created else "task_linked"
+        if alert_msg:
+            event_type = "risk_alert"
+        ai_event = AIEvent(
+            workspace_id=workspace_id,
+            event_type=event_type,
+            payload=json.dumps({
+                "task_id": db_task.id if db_task else None,
+                "similarity_label": similarity_label,
+                "risk_score": risk_score,
+                "risk_level": risk_level,
+            }),
+            triggered_by_message_id=message_id,
+        )
+        db.add(ai_event)
+        db.commit()
+
+        # ──────────────────────────────────────────────────────────────
+        # STEP 5d — AI Bot message (announce in channel)
+        # ──────────────────────────────────────────────────────────────
+        if channel_id and db_task:
+            self._post_ai_bot_message(db, workspace_id, channel_id, db_task, task_created, similarity_label, risk_level, risk_score, alert_msg)
 
         # ──────────────────────────────────────────────────────────────
         # STEP 6 — Compose result
@@ -415,6 +490,110 @@ class AIOrchestrator:
         return _predict_risk(
             features, self.risk_model, self.risk_scaler, self.risk_explainer
         )
+
+    # ==================================================================
+    # AI Bot message posting
+    # ==================================================================
+    def _post_ai_bot_message(
+        self, db: Session,
+        workspace_id: int, channel_id: int,
+        db_task, task_created: bool,
+        similarity_label: str, risk_level: str,
+        risk_score: float, alert_msg: str = None,
+    ):
+        """
+        Post an AI bot message into the channel announcing task actions.
+        """
+        from app.models.user import User
+        from app.config import settings
+
+        ai_bot = db.query(User).filter(User.email == settings.AI_BOT_EMAIL).first()
+        if not ai_bot:
+            return
+
+        parts = []
+        if task_created:
+            parts.append(f"🤖 Task #{db_task.id} created: \"{db_task.title}\" [{similarity_label}]")
+        else:
+            parts.append(f"🤖 Task #{db_task.id} updated (duplicate detected)")
+
+        parts.append(f"Risk: {risk_score:.0%} ({risk_level})")
+
+        if alert_msg:
+            parts.append(alert_msg)
+
+        bot_content = " | ".join(parts)
+
+        bot_msg = DBMessage(
+            content=bot_content,
+            sender=ai_bot.name,
+            sender_id=ai_bot.id,
+            workspace_id=workspace_id,
+            channel_id=channel_id,
+        )
+        db.add(bot_msg)
+        db.commit()
+        logger.info(f"  AI Bot posted message in channel {channel_id}")
+
+    # ==================================================================
+    # Risk queries for GET endpoints
+    # ==================================================================
+    def get_task_risk(self, db: Session, task_id: int) -> dict:
+        """Get risk information for a specific task."""
+        task = db.query(DBTask).filter(DBTask.id == task_id).first()
+        if not task:
+            return None
+        return {
+            "task_id": task.id,
+            "risk_score": task.risk_score or 0.0,
+            "risk_level": task.risk_level or "Low",
+            "explanation": task.risk_reason or "No risk data available",
+        }
+
+    def get_workspace_risk(self, db: Session, workspace_id: int) -> dict:
+        """Aggregate risk information for all tasks in a workspace."""
+        tasks = db.query(DBTask).filter(DBTask.workspace_id == workspace_id).all()
+        if not tasks:
+            return {
+                "workspace_id": workspace_id,
+                "total_tasks": 0,
+                "avg_risk_score": 0.0,
+                "risk_level": "Low",
+                "explanation": "No tasks in this workspace",
+                "risk_distribution": {"Low": 0, "Medium": 0, "High": 0, "Critical": 0},
+                "high_risk_tasks": [],
+            }
+
+        risk_scores = [t.risk_score for t in tasks if t.risk_score is not None]
+        avg_risk = sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
+
+        distribution = {"Low": 0, "Medium": 0, "High": 0, "Critical": 0}
+        for t in tasks:
+            level = t.risk_level or "Low"
+            distribution[level] = distribution.get(level, 0) + 1
+
+        # Overall risk level
+        if avg_risk > 0.7:
+            overall_level = "Critical" if avg_risk > 0.85 else "High"
+        elif avg_risk > 0.4:
+            overall_level = "Medium"
+        else:
+            overall_level = "Low"
+
+        high_risk_tasks = [
+            {"task_id": t.id, "title": t.title, "risk_score": t.risk_score, "risk_level": t.risk_level}
+            for t in tasks if t.risk_score and t.risk_score > 0.7
+        ]
+
+        return {
+            "workspace_id": workspace_id,
+            "total_tasks": len(tasks),
+            "avg_risk_score": round(avg_risk, 4),
+            "risk_level": overall_level,
+            "explanation": f"{len(high_risk_tasks)} high-risk tasks out of {len(tasks)} total",
+            "risk_distribution": distribution,
+            "high_risk_tasks": high_risk_tasks,
+        }
 
 
 # Module-level singleton accessor

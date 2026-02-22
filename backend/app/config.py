@@ -23,6 +23,15 @@ class Settings:
     POSTGRES_PORT: str = os.getenv("POSTGRES_PORT", "5432")
     BACKEND_PORT: int = int(os.getenv("BACKEND_PORT", "8000"))
 
+    # JWT Authentication
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "change-me-in-production-super-secret-key")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_EXPIRE_MINUTES: int = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))  # 24 hours
+
+    # AI Bot
+    AI_BOT_EMAIL: str = "ai_bot@system"
+    AI_BOT_NAME: str = "AI Bot"
+
     @property
     def DATABASE_URL(self) -> str:
         """SQLAlchemy-compatible PostgreSQL connection string."""

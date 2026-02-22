@@ -1,6 +1,6 @@
 """tasks table – engineered tasks extracted by the ML pipeline."""
 
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, func
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, ForeignKey, func
 
 from app.database import Base
 
@@ -20,4 +20,7 @@ class Task(Base):
     similarity_label = Column(String(50), nullable=True, default="NEW")
     linked_task_id = Column(Integer, nullable=True)
     update_notes = Column(Text, nullable=True, default="")
+    workspace_id = Column(Integer, ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True, index=True)
+    channel_id = Column(Integer, ForeignKey("channels.id", ondelete="SET NULL"), nullable=True)
+    assigned_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -2,6 +2,7 @@
 alert_service.py
 ================
 CRUD helpers for the alerts table.
+Supports workspace-scoped queries.
 """
 
 from typing import List
@@ -10,9 +11,12 @@ from sqlalchemy.orm import Session
 from app.models.alert import Alert
 
 
-def get_all_alerts(db: Session) -> List[Alert]:
+def get_all_alerts(db: Session, workspace_id: int = None) -> List[Alert]:
     """Return all alerts ordered by creation date (newest first)."""
-    return db.query(Alert).order_by(Alert.created_at.desc()).all()
+    query = db.query(Alert)
+    if workspace_id:
+        query = query.filter(Alert.workspace_id == workspace_id)
+    return query.order_by(Alert.created_at.desc()).all()
 
 
 def get_alerts_for_task(db: Session, task_id: int) -> List[Alert]:
@@ -25,9 +29,12 @@ def get_alerts_for_task(db: Session, task_id: int) -> List[Alert]:
     )
 
 
-def count_alerts_by_level(db: Session) -> dict:
+def count_alerts_by_level(db: Session, workspace_id: int = None) -> dict:
     """Return a breakdown of alerts by severity level."""
-    alerts = db.query(Alert).all()
+    query = db.query(Alert)
+    if workspace_id:
+        query = query.filter(Alert.workspace_id == workspace_id)
+    alerts = query.all()
     breakdown = {"Low": 0, "Medium": 0, "High": 0, "Critical": 0}
     for a in alerts:
         level = a.level or "Medium"
