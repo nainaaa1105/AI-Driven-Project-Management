@@ -195,9 +195,11 @@ async def websocket_workspace(websocket: WebSocket, workspace_id: int, token: st
             await websocket.close(code=4004, reason="Workspace not found")
             return
 
-        # Check membership or open access
+        # Require actual membership — WebSocket must never auto-join.
+        # Even open workspaces require the user to have joined first via
+        # POST /workspaces/{id}/join before they can connect.
         is_member = _check_workspace_membership(user.id, workspace_id, db)
-        if not is_member and workspace.access_type != "open":
+        if not is_member:
             await websocket.close(code=4003, reason="Not a member of this workspace")
             return
 

@@ -56,15 +56,8 @@ def create_workspace(
     )
     db.add(member)
 
-    # Also add AI Bot to the workspace if it exists
-    ai_bot = db.query(User).filter(User.email == settings.AI_BOT_EMAIL).first()
-    if ai_bot:
-        bot_member = WorkspaceMember(
-            workspace_id=workspace.id,
-            user_id=ai_bot.id,
-            role="member",
-        )
-        db.add(bot_member)
+    # NOTE: AI Bot is NOT added as a workspace member.
+    # It posts messages via system-level access without needing membership.
 
     # Create default #general channel
     general_channel = Channel(
@@ -145,7 +138,7 @@ def list_members(
         .filter(WorkspaceMember.workspace_id == workspace_id)
         .all()
     )
-    # Enrich with user names
+    # Enrich with user names (exclude system bot accounts)
     user_ids = [m.user_id for m in members]
     users_map = {}
     if user_ids:
@@ -154,6 +147,11 @@ def list_members(
     result = []
     for m in members:
         u = users_map.get(m.user_id)
+        # Skip system/bot users so they never appear in the members list
+        if u and getattr(u, 'role', None) == 'system':
+            continue
+        if u and u.email == settings.AI_BOT_EMAIL:
+            continue
         result.append(WorkspaceMemberOut(
             id=m.id,
             workspace_id=m.workspace_id,
