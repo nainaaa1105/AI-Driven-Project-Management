@@ -1,8 +1,8 @@
 # Horizon - AI Project Intelligence
 
-A multi-user, workspace-based, real-time AI project intelligence system that transforms natural-language team conversations into structured tasks, risk predictions, and executive insights — automatically.
+A multi-user, workspace-based, real-time AI project intelligence system that transforms natural-language team conversations into structured tasks, risk predictions, and executive insights - automatically.
 
-Inspired by Discord/Slack collaboration patterns combined with AI-driven task management, Horizon enables teams to chat naturally while an intelligent backend extracts actionable work items, predicts delivery risks, and surfaces insights — all scoped to isolated workspaces with role-based access control.
+Inspired by Discord/Slack collaboration patterns combined with AI-driven task management, Horizon enables teams to chat naturally while an intelligent backend extracts actionable work items, predicts delivery risks, and surfaces insights - all scoped to isolated workspaces with role-based access control.
 
 ---
 
@@ -27,14 +27,14 @@ Inspired by Discord/Slack collaboration patterns combined with AI-driven task ma
 
 Horizon is a full-stack AI project management platform built with React and FastAPI. It goes beyond traditional project management tools by embedding AI directly into the collaboration workflow:
 
-- **Team members chat** in workspace channels — just like Slack or Discord.
+- **Team members chat** in workspace channels - just like Slack or Discord.
 - **AI extracts tasks** from every message: it classifies the domain, urgency, entities, and contacts automatically.
 - **Duplicate detection** prevents redundant tasks by computing semantic similarity against existing work items.
 - **Risk scoring** predicts the probability of task failure using historical features and ML models.
 - **Alerts fire automatically** when risk thresholds are breached, tasks are blocked, or deadlines are missed.
 - **Dashboards and risk views** give managers real-time visibility into project health.
 
-All data is **workspace-scoped** — tasks, messages, risks, and alerts are isolated per workspace. Multiple users can collaborate in the same workspace with real-time WebSocket updates.
+All data is **workspace-scoped** - tasks, messages, risks, and alerts are isolated per workspace. Multiple users can collaborate in the same workspace with real-time WebSocket updates.
 
 ---
 
@@ -47,7 +47,7 @@ All data is **workspace-scoped** — tasks, messages, risks, and alerts are isol
 
 ### Multi-Workspace Support
 - Create unlimited workspaces with name, description, and access type
-- Switch between workspaces instantly — all page data reloads automatically
+- Switch between workspaces instantly - all page data reloads automatically
 - Active workspace persisted across browser refreshes
 
 ### Workspace Access Types
@@ -127,7 +127,7 @@ Client                          Server
 ```
 
 **Key design decisions:**
-- Messages are sent via **REST** (not WS) to ensure the AI pipeline processes them once — no duplicate tasks
+- Messages are sent via **REST** (not WS) to ensure the AI pipeline processes them once - no duplicate tasks
 - The REST endpoint then **broadcasts** the result to all WS clients for real-time visibility
 - Presence updates are emitted on connect and disconnect events
 - Workspace deletion broadcasts a `workspace_deleted` event before cascade-deleting data
@@ -139,21 +139,21 @@ Client                          Server
 Horizon's AI pipeline processes every chat message through three ML modules:
 
 ### ML-1: NLP Classification & Entity Extraction
-- **Zero-shot classification** using `distilbert-base-uncased-mnli` — classifies messages into domains (frontend, backend, devops, security, etc.) without training on project-specific data
-- **Entity extraction** via spaCy `en_core_web_sm` — detects people, organizations, dates, and contacts
+- **Zero-shot classification** using `distilbert-base-uncased-mnli` - classifies messages into domains (frontend, backend, devops, security, etc.) without training on project-specific data
+- **Entity extraction** via spaCy `en_core_web_sm` - detects people, organizations, dates, and contacts
 - **Urgency detection** from message language patterns
 
 ### ML-2: Task Linking & Similarity
-- **Sentence embeddings** using `all-MiniLM-L6-v2` — encodes task titles into dense vectors
-- **Cosine similarity** matching against existing tasks — prevents duplicate creation
+- **Sentence embeddings** using `all-MiniLM-L6-v2` - encodes task titles into dense vectors
+- **Cosine similarity** matching against existing tasks - prevents duplicate creation
 - Labels: `NEW` (no match), `SIMILAR` (related task found), `DUPLICATE` (near-exact match, updates existing)
 
 ### ML-3: Risk Prediction
 - **Random Forest Regressor** trained on task features (domain, urgency, history)
-- **SHAP explanations** for risk scores — shows which features drive the prediction
+- **SHAP explanations** for risk scores - shows which features drive the prediction
 - Outputs a 0–100% risk score mapped to Low / Medium / High / Critical levels
 
-> AI augments the team — it does **not** replace human judgment. All AI outputs are visible and editable.
+> AI augments the team - it does **not** replace human judgment. All AI outputs are visible and editable.
 
 ---
 
@@ -272,8 +272,8 @@ Horizon's AI pipeline processes every chat message through three ML modules:
 
 | Page | Tab | Key Features |
 |------|-----|-------------|
-| **Landing** | — | Public splash with animated CTA, dark Horizon theme, subtle grid lines, edge glow orbs, horizon line, noise grain overlay, corner depth gradients |
-| **Auth** | — | Login / Register forms, JWT token storage |
+| **Landing** | - | Public splash with animated CTA, dark Horizon theme, subtle grid lines, edge glow orbs, horizon line, noise grain overlay, corner depth gradients |
+| **Auth** | - | Login / Register forms, JWT token storage |
 | **Chat** | Chat | AI chat input, message history, members sidebar with presence dots, AI analysis panel, voice UI (visual), custom domain management, add member modal (admin) |
 | **Tasks** | Tasks | Kanban columns (Open → In Progress → Updated → Resolved), drag-and-click status updates, inline edit modal with domain chips + urgency selector + assignee avatars |
 | **Dashboard** | Dashboard | Stat cards (messages, tasks, alerts, avg risk), risk distribution bar chart, recent alerts list, recent tasks table, Horizon futuristic theme (grid, glow orbs, scanlines, frosted glass) |
@@ -294,7 +294,7 @@ Horizon's AI pipeline processes every chat message through three ML modules:
 git clone <repo-url>
 cd AI-Driven-Project-Management
 cp .env.example backend/.env
-# Edit backend/.env — set POSTGRES_PASSWORD and other variables
+# Edit backend/.env - set POSTGRES_PASSWORD and other variables
 ```
 
 ### 2. Database
@@ -401,12 +401,12 @@ When a user visits Horizon, they see an animated landing page. Clicking "Enter H
 
 #### 2. Workspace System
 After login, the user enters the main application shell. The top bar contains a workspace selector dropdown. Users can:
-- **Create** a workspace (private or open) — the creator automatically becomes the admin
-- **Switch** between workspaces — all tabs (Chat, Tasks, Dashboard, Risk) reload with workspace-scoped data
-- **Join** other workspaces by entering a workspace ID or clicking an invite link (`/join/{id}`) — open workspaces allow instant joining; private workspaces require an admin to add the user
-- **Share** workspace access via the Workspace Info panel — copy the ID or a full invite link to clipboard
-- **Leave** a workspace — the backend prevents the last admin from leaving
-- **Delete** a workspace (admin only) — this cascade-deletes all channels, messages, tasks, alerts, and members, and notifies all connected WebSocket clients
+- **Create** a workspace (private or open) - the creator automatically becomes the admin
+- **Switch** between workspaces - all tabs (Chat, Tasks, Dashboard, Risk) reload with workspace-scoped data
+- **Join** other workspaces by entering a workspace ID or clicking an invite link (`/join/{id}`) - open workspaces allow instant joining; private workspaces require an admin to add the user
+- **Share** workspace access via the Workspace Info panel - copy the ID or a full invite link to clipboard
+- **Leave** a workspace - the backend prevents the last admin from leaving
+- **Delete** a workspace (admin only) - this cascade-deletes all channels, messages, tasks, alerts, and members, and notifies all connected WebSocket clients
 
 #### 3. Chat & AI Pipeline
 The Chat tab is where the core intelligence happens. When a user types a message:
@@ -415,11 +415,11 @@ The Chat tab is where the core intelligence happens. When a user types a message
 3. The **AI Orchestrator** runs the message through three ML models in sequence:
    - **ML-1 (NLP)**: Classifies the domain (frontend, backend, devops, etc.), detects urgency, extracts entities (people, dates, organizations) and contacts
    - **ML-2 (Task Similarity)**: Encodes the message as a sentence embedding and computes cosine similarity against all existing tasks in the workspace. If similarity exceeds a threshold, the existing task is updated instead of creating a duplicate
-   - **ML-3 (Risk)**: Predicts a 0–100% failure risk score using features like domain, urgency, and historical patterns. Generates SHAP-based explanations for the score
+   - **ML-3 (Risk)**: Predicts a 0-100% failure risk score using features like domain, urgency, and historical patterns. Generates SHAP-based explanations for the score
 4. A task is created (or updated) in the database with all extracted metadata
 5. If the risk score exceeds a threshold, an alert is created automatically
 6. The AI result is returned to the sender via the HTTP response
-7. The message and AI result are **broadcast** to all other workspace members via WebSocket — they see both appear in real time
+7. The message and AI result are **broadcast** to all other workspace members via WebSocket - they see both appear in real time
 8. The sender sees the AI analysis in a sidebar panel showing summary, task details, risk score, and any alerts
 
 #### 4. Task Management
