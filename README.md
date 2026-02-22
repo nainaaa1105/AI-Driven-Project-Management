@@ -1,4 +1,4 @@
-# Horizon — AI Project Intelligence
+# Horizon - AI Project Intelligence
 
 A multi-user, workspace-based, real-time AI project intelligence system that transforms natural-language team conversations into structured tasks, risk predictions, and executive insights — automatically.
 
