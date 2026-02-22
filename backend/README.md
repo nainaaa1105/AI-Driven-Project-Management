@@ -1,4 +1,4 @@
-# AI-Driven Project Intelligence — Backend
+# AI-Driven Project Intelligence - Backend
 
 ## Overview
 
