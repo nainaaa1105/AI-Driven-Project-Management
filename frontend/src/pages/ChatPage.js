@@ -447,7 +447,7 @@ export default function ChatPage({ onNavigate, user, workspace, wsEpoch }) {
             </button>
           ) : (
             <button className="voice-btn voice-btn-active" onClick={() => setIsInVoice(false)}>
-              <span className="voice-pulse" /> In Voice — Leave
+              <span className="voice-pulse" /> In Voice · Leave
             </button>
           )}
           {isInVoice && (

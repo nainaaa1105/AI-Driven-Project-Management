@@ -118,7 +118,7 @@ export default function DashboardPage({ workspace, wsEpoch }) {
                 <span style={{ fontWeight: 500 }}>Alert system active</span>
               </div>
               <p style={{ lineHeight: 1.6, margin: 0 }}>
-                No alerts yet -- alerts trigger when risk is high, tasks are blocked, or deadlines are missed.
+                No alerts yet. Alerts trigger when risk is high, tasks are blocked, or deadlines are missed.
               </p>
             </div>
           )}

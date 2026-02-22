@@ -46,7 +46,7 @@ export default function App() {
   const [joinWsId, setJoinWsId] = useState("");
   const [joinWsLoading, setJoinWsLoading] = useState(false);
   const [joinWsResult, setJoinWsResult] = useState(null);   // { id, name, description }
-  const [joinWsError, setJoinWsError] = useState("");
+  const [joinWsError, setJoinWsError] = useState(""); //changes made here
 
   /* ── Workspace epoch — bumped on switch so children reload ──────── */
   const [wsEpoch, setWsEpoch] = useState(0);

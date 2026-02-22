@@ -55,7 +55,7 @@ export default function RiskPage({ workspace, wsEpoch }) {
       {wsRisk && (
         <div className="card" style={{ marginBottom: 20 }}>
           <h3 style={{ fontSize: "0.9rem", color: "var(--accent-light)", fontWeight: 600, marginBottom: 10 }}>
-            Workspace Risk — {workspace?.name}
+            Workspace Risk: {workspace?.name}
           </h3>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap", fontSize: "0.85rem" }}>
             {wsRisk.avg_risk_score != null && (
@@ -137,7 +137,7 @@ export default function RiskPage({ workspace, wsEpoch }) {
               >
                 {result.risk_score >= 0
                   ? `${(result.risk_score * 100).toFixed(0)}%`
-                  : "—"}
+                  : "N/A"}
               </div>
               <div style={{ marginTop: 8 }}>
                 <span className={`risk-badge ${result.risk_level}`} style={{ fontSize: "1rem", padding: "6px 18px" }}>

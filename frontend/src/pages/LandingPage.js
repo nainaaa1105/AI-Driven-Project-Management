@@ -99,7 +99,7 @@ export default function LandingPage({ onEnter, onDashboard }) {
           </h1>
           <p className="hero-tagline">AI Project Intelligence</p>
           <p className="hero-sub">From conversations to clarity. Automatically.</p>
-          <p className="hero-quote">"Great teams don't track work -- intelligence does."</p>
+          <p className="hero-quote">"Great teams don't track work. Intelligence does."</p>
           <div className="hero-ctas">
             <button className="btn-glow" onClick={onEnter}>Get Started</button>
             <button className="btn-glass" onClick={onDashboard}>View Dashboard</button>
@@ -173,7 +173,7 @@ export default function LandingPage({ onEnter, onDashboard }) {
       </section>
 
       <footer className="landing-footer">
-        <span>Horizon -- AI Project Intelligence -- Built with FastAPI, React & ML</span>
+        <span>Horizon · AI Project Intelligence · Built with FastAPI, React & ML</span>
       </footer>
     </div>
   );
